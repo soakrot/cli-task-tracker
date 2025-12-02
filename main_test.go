@@ -21,7 +21,7 @@ func TestAddTask(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s, %s", tt.description, tt.status)
+		testname := fmt.Sprintf("want description: %q, status: %q", tt.description, tt.status)
 		t.Run(testname, func(t *testing.T) {
 			res, _ := store.AddTask(tt.description)
 			if res == -1 {
@@ -49,7 +49,7 @@ func TestUpdateTask(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s", tt.c)
+		testname := fmt.Sprintf("want: %q", tt.c)
 		t.Run(testname, func(t *testing.T) {
 			err := store.UpdateTask(tt.id, tt.c)
 			task := store.Tasks[tt.id].Description
@@ -81,12 +81,40 @@ func TestDeleteTask(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s", tt.want)
+		testname := fmt.Sprintf("want: %q", tt.want)
 		t.Run(testname, func(t *testing.T) {
 			out, _ := store.DeleteTask(tt.id)
 
 			if strings.ToLower(out) != tt.want {
 				t.Errorf("got %q, want %q", out, tt.want)
+			}
+		})
+	}
+}
+
+func TestMarkTask(t *testing.T) {
+	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
+	store.AddTask("Task 1")
+	store.AddTask("Task 2")
+	store.AddTask("Task 3")
+
+	tests := []struct {
+		name        string
+		id          uint
+		status      string
+		expectedErr error
+	}{
+		{"mark task 'in-progress'", 1, "in-progress", nil},
+		{"mark task 'done'", 1, "done", nil},
+		{"mark task 'waiting'", 3, "waiting", fmt.Errorf("Invalid status")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := store.MarkTask(tt.id, tt.status)
+
+			if tt.expectedErr == nil && err != tt.expectedErr {
+				t.Errorf("got: %v, expected: %v", err, tt.expectedErr)
 			}
 		})
 	}
