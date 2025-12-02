@@ -44,91 +44,112 @@ const (
 	reset = "\033[0m"
 )
 
+var store = Store{Tasks: make(map[uint]*Task), NextID: 1}
+
+var commands = map[string]func([]string){
+	"add":    AddCmd,
+	"update": UpdateCmd,
+	"delete": DeleteCmd,
+	"mark":   MarkCmd,
+	"list":   ListCmd,
+}
+
 func main() {
 	if len(os.Args) == 1 {
-		printHelp()
+		printUsage()
 		os.Exit(1)
 	}
 
-	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
-	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
-	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
-	markCmd := flag.NewFlagSet("mark", flag.ExitOnError)
-	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
-
-	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
 	err := loadData(&store)
 	if err != nil {
 		fmt.Println(fmt.Errorf("Error while loading data: %w", err))
 	}
 
-	switch os.Args[1] {
-	case "add":
-		addCmd.Parse(os.Args[2:])
-		input := addCmd.Arg(0)
-		id, err := store.AddTask(input)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		writeData(&store)
-		fmt.Println(id)
-	case "update":
-		updateCmd.Parse(os.Args[2:])
-		content := updateCmd.Arg(1)
-		id, err := strconv.ParseUint(updateCmd.Arg(0), 10, 0)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+	cmd, ok := commands[os.Args[1]]
+	if !ok {
+		printUsage()
+		os.Exit(1)
+	}
 
-		if err := store.UpdateTask(uint(id), content); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		writeData(&store)
-	case "delete":
-		deleteCmd.Parse(os.Args[2:])
-		id, err := strconv.ParseUint(deleteCmd.Arg(0), 10, 0)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+	cmd(os.Args[2:])
+}
 
-		if out, err := store.DeleteTask(uint(id)); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		} else {
-			fmt.Println(out)
-		}
-		writeData(&store)
-	case "mark":
-		markCmd.Parse(os.Args[2:])
-		status := markCmd.Arg(1)
-		id, err := strconv.ParseUint(markCmd.Arg(0), 10, 0)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+func AddCmd(args []string) {
+	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
+	addCmd.Parse(os.Args[2:])
+	input := addCmd.Arg(0)
+	id, err := store.AddTask(input)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	writeData(&store)
+	fmt.Println(id)
+}
 
-		if err := store.MarkTask(uint(id), status); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		writeData(&store)
-	case "list":
-		listCmd.Parse(os.Args[2:])
-		status := listCmd.Arg(0)
-		if err := store.ListTasks(status); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	default:
+func UpdateCmd(args []string) {
+	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
+	updateCmd.Parse(args)
+	content := updateCmd.Arg(1)
+	id, err := strconv.ParseUint(updateCmd.Arg(0), 10, 0)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := store.UpdateTask(uint(id), content); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	writeData(&store)
+}
+
+func DeleteCmd(args []string) {
+	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
+	deleteCmd.Parse(args)
+	id, err := strconv.ParseUint(deleteCmd.Arg(0), 10, 0)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if out, err := store.DeleteTask(uint(id)); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	} else {
+		fmt.Println(out)
+	}
+	writeData(&store)
+}
+
+func MarkCmd(args []string) {
+	markCmd := flag.NewFlagSet("mark", flag.ExitOnError)
+	markCmd.Parse(args)
+	status := markCmd.Arg(1)
+	id, err := strconv.ParseUint(markCmd.Arg(0), 10, 0)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := store.MarkTask(uint(id), status); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	writeData(&store)
+}
+
+func ListCmd(args []string) {
+	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
+	listCmd.Parse(args)
+	status := listCmd.Arg(0)
+	if err := store.ListTasks(status); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func printHelp() {
+func printUsage() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.TabIndent)
 	fmt.Fprintln(w, bold+"Usage:"+reset)
 	fmt.Fprintln(w, "  "+bold+"task-tacker "+reset+"<command> <title>")
