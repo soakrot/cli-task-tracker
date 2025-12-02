@@ -110,6 +110,49 @@ func (s *Store) AddTask(description string) (int, error) {
 	return int(newTask.Id), nil
 }
 
+func printTask(writer *tabwriter.Writer, task *Task) {
+	fmt.Fprintf(writer,
+		"%d\t%q\t%s\t%s\t%s\n",
+		task.Id,
+		task.Description,
+		task.Status,
+		time.Unix(task.CreatedAt, 0).Format(time.RFC1123),
+		time.Unix(task.UpdatedAt, 0).Format(time.RFC1123),
+	)
+}
+
+func printTasks(tasks Tasks, status string) {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.TabIndent)
+	fmt.Fprintln(w, "id\tdescription\tstatus\tcreated-at\tupdated-at")
+	for _, task := range tasks {
+		if task.Status == taskStatus(status) {
+			printTask(w, task)
+		}
+		if len(status) == 0 {
+			printTask(w, task)
+		}
+	}
+	w.Flush()
+}
+
+func (s *Store) ListTasks(status string) error {
+	if len(s.Tasks) == 0 {
+		return errors.New("There are no tasks, start working!")
+	}
+
+	if len(strings.Trim(string(status), " ")) == 0 {
+		printTasks(s.Tasks, "")
+		return nil
+	}
+
+	if ok, err := isValidStatus(status); !ok {
+		return fmt.Errorf("list: %w: '%s'\n", err, status)
+	}
+
+	printTasks(s.Tasks, status)
+	return nil
+}
+
 func isFileExists(path string) bool {
 	_, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -179,6 +222,7 @@ func main() {
 	}
 
 	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
+	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
 
 	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
 	err := loadData(&store)
@@ -207,7 +251,12 @@ func main() {
 		// TODO: implement task marking
 		writeData(&store)
 	case "list":
-		// TODO: implement task listing
+		listCmd.Parse(os.Args[2:])
+		status := listCmd.Arg(0)
+		if err := store.ListTasks(status); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	default:
 		os.Exit(1)
 	}
