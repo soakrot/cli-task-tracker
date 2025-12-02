@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -108,6 +109,25 @@ func (s *Store) AddTask(description string) (int, error) {
 	s.NextID++
 
 	return int(newTask.Id), nil
+}
+
+func (s *Store) UpdateTask(id uint, c string) error {
+	if len(s.Tasks) == 0 {
+		return errors.New("There are no tasks, start working!")
+	}
+
+	if _, ok := s.Tasks[id]; !ok {
+		return errors.New("Invalid task ID")
+	}
+
+	if len(strings.Trim(c, " ")) == 0 {
+		return errors.New("Empty content")
+	}
+
+	s.Tasks[id].Description = c
+	s.Tasks[id].UpdatedAt = time.Now().Unix()
+
+	return nil
 }
 
 func printTask(writer *tabwriter.Writer, task *Task) {
@@ -222,6 +242,7 @@ func main() {
 	}
 
 	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
+	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
 	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
 
 	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
@@ -242,7 +263,18 @@ func main() {
 		writeData(&store)
 		fmt.Println(id)
 	case "update":
-		// TODO: implement task updating
+		updateCmd.Parse(os.Args[2:])
+		content := updateCmd.Arg(1)
+		id, err := strconv.ParseUint(updateCmd.Arg(0), 10, 0)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		if err := store.UpdateTask(uint(id), content); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		writeData(&store)
 	case "delete":
 		// TODO: implement task deletion
