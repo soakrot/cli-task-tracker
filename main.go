@@ -79,7 +79,7 @@ func isValidStatus(status string) (bool, error) {
 	case todo, inProgress, done:
 		return true, nil
 	default:
-		return false, errors.New("Invalid task status")
+		return false, errors.New("Invalid status")
 	}
 }
 
