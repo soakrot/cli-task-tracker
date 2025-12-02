@@ -130,6 +130,26 @@ func (s *Store) UpdateTask(id uint, c string) error {
 	return nil
 }
 
+func (s *Store) DeleteTask(id uint) (string, error) {
+	if len(s.Tasks) == 0 {
+		return "", errors.New("There are no tasks, start working!")
+	}
+
+	out, ok := s.Tasks[id]
+	if !ok {
+		return "", errors.New("Invalid task ID")
+	}
+
+	if len(s.Tasks) == 1 {
+		s.Tasks = map[uint]*Task{}
+		s.NextID = 1
+		return out.Description, nil
+	}
+
+	delete(s.Tasks, id)
+	return out.Description, nil
+}
+
 func printTask(writer *tabwriter.Writer, task *Task) {
 	fmt.Fprintf(writer,
 		"%d\t%q\t%s\t%s\t%s\n",
@@ -243,6 +263,7 @@ func main() {
 
 	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
 	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
+	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
 
 	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
@@ -277,7 +298,19 @@ func main() {
 		}
 		writeData(&store)
 	case "delete":
-		// TODO: implement task deletion
+		deleteCmd.Parse(os.Args[2:])
+		id, err := strconv.ParseUint(deleteCmd.Arg(0), 10, 0)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		if out, err := store.DeleteTask(uint(id)); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		} else {
+			fmt.Println(out)
+		}
 		writeData(&store)
 	case "mark":
 		// TODO: implement task marking
