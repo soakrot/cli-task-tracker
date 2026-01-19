@@ -97,7 +97,8 @@ func UpdateCmd(args []string) {
 		os.Exit(1)
 	}
 
-	if err := store.UpdateTask(uint(id), content); err != nil {
+	err = store.UpdateTask(uint(id), content)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -112,13 +113,12 @@ func DeleteCmd(args []string) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	if out, err := store.DeleteTask(uint(id)); err != nil {
+	out, err := store.DeleteTask(uint(id))
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	} else {
-		fmt.Println(out)
 	}
+	fmt.Println(out)
 	writeData(&store)
 }
 
@@ -131,8 +131,8 @@ func MarkCmd(args []string) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	if err := store.MarkTask(uint(id), status); err != nil {
+	err = store.MarkTask(uint(id), status)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -324,8 +324,7 @@ func isFileExists(path string) bool {
 }
 
 func loadData(s *Store) error {
-	dataPath := os.ExpandEnv(filepath.Join(os.TempDir(), "tasks.json"))
-	// dataPath := os.ExpandEnv(storePath)
+	dataPath := os.ExpandEnv(storePath)
 
 	if !isFileExists(dataPath) {
 		if err := os.MkdirAll(filepath.Dir(dataPath), 0o766); err != nil {
@@ -362,7 +361,7 @@ func loadData(s *Store) error {
 }
 
 func writeData(s *Store) error {
-	dataPath := filepath.Join(os.TempDir(), "tasks.json")
+	dataPath := os.ExpandEnv(storePath)
 
 	data, err := json.Marshal(s)
 	if err != nil {
