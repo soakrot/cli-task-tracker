@@ -1,14 +1,12 @@
-package main
+package store
 
 import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -25,150 +23,18 @@ const (
 )
 
 type Task struct {
-	Id          uint
+	Id          int
 	CreatedAt   int64
 	UpdatedAt   int64
 	Description string
 	Status      taskStatus
 }
 
-type Tasks map[uint]*Task
+type Tasks map[int]*Task
 
 type Store struct {
 	Tasks  Tasks `json:"tasks"`
-	NextID uint  `json:"nextID"`
-}
-
-const (
-	bold  = "\033[1m"
-	reset = "\033[0m"
-)
-
-var store = Store{Tasks: make(map[uint]*Task), NextID: 1}
-
-var commands = map[string]func([]string){
-	"add":    AddCmd,
-	"update": UpdateCmd,
-	"delete": DeleteCmd,
-	"mark":   MarkCmd,
-	"list":   ListCmd,
-}
-
-func main() {
-	if len(os.Args) == 1 {
-		printUsage()
-		os.Exit(1)
-	}
-
-	err := loadData(&store)
-	if err != nil {
-		fmt.Println(fmt.Errorf("Error while loading data: %w", err))
-	}
-
-	cmd, ok := commands[os.Args[1]]
-	if !ok {
-		printUsage()
-		os.Exit(1)
-	}
-
-	cmd(os.Args[2:])
-}
-
-func AddCmd(args []string) {
-	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
-	addCmd.Parse(os.Args[2:])
-	input := addCmd.Arg(0)
-	id, err := store.AddTask(input)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	writeData(&store)
-	fmt.Println(id)
-}
-
-func UpdateCmd(args []string) {
-	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
-	updateCmd.Parse(args)
-	content := updateCmd.Arg(1)
-	id, err := strconv.ParseUint(updateCmd.Arg(0), 10, 0)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	err = store.UpdateTask(uint(id), content)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	writeData(&store)
-}
-
-func DeleteCmd(args []string) {
-	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
-	deleteCmd.Parse(args)
-	id, err := strconv.ParseUint(deleteCmd.Arg(0), 10, 0)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	out, err := store.DeleteTask(uint(id))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	fmt.Println(out)
-	writeData(&store)
-}
-
-func MarkCmd(args []string) {
-	markCmd := flag.NewFlagSet("mark", flag.ExitOnError)
-	markCmd.Parse(args)
-	status := markCmd.Arg(1)
-	id, err := strconv.ParseUint(markCmd.Arg(0), 10, 0)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	err = store.MarkTask(uint(id), status)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	writeData(&store)
-}
-
-func ListCmd(args []string) {
-	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
-	listCmd.Parse(args)
-	status := listCmd.Arg(0)
-	if err := store.ListTasks(status); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
-
-func printUsage() {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.TabIndent)
-	fmt.Fprintln(w, bold+"Usage:"+reset)
-	fmt.Fprintln(w, "  "+bold+"task-tacker "+reset+"<command> <title>")
-	fmt.Fprintln(w, "  "+bold+"task-tacker "+reset+"update <task-id> <title>")
-	fmt.Fprintln(w, "  "+bold+"task-tacker "+reset+"delete <task-id>")
-	fmt.Fprintln(w, "  "+bold+"task-tacker "+reset+"list [<done | todo | in-progress>]")
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, bold+"Commands:"+reset)
-	fmt.Fprintln(w, "  "+bold+"add\t"+reset+"<title>\tAdd a new task and return its ID")
-	fmt.Fprintln(w, "  "+bold+"update\t"+reset+"<id> <title>\tUpdate the title of task \033[1mid\033[0m")
-	fmt.Fprintln(w, "  "+bold+"delete\t"+reset+"<id>\tDelete task \033[1mid\033[0m permanently")
-	fmt.Fprintln(w, "  "+bold+"list\t"+reset+"<status>\tList all tasks, or filter by \033[1mstatus\033[0m")
-	fmt.Fprintln(w, "  "+bold+"mark\t"+reset+"<id> <status>\tMark task as todo | in-progress | done")
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, bold+"Options:"+reset)
-	fmt.Fprintln(w, "  "+bold+"-h, --help:"+reset+"\tPrint help")
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, bold+"Status values:\t"+reset+"done | todo | in-progress")
-	w.Flush()
+	NextID int   `json:"nextID"`
 }
 
 func (t *Task) setStatus(status string) error {
@@ -188,7 +54,7 @@ func isValidStatus(status string) (bool, error) {
 	}
 }
 
-func createTask(id uint, description, status string) (*Task, error) {
+func createTask(id int, description, status string) (*Task, error) {
 	task := Task{
 		Id:          id,
 		Description: description,
@@ -212,11 +78,12 @@ func (s *Store) AddTask(description string) (int, error) {
 	}
 	s.Tasks[newTask.Id] = newTask
 	s.NextID++
+	WriteData(s)
 
 	return int(newTask.Id), nil
 }
 
-func (s *Store) UpdateTask(id uint, c string) error {
+func (s *Store) UpdateTask(id int, c string) error {
 	if len(s.Tasks) == 0 {
 		return errors.New("There are no tasks, start working!")
 	}
@@ -231,11 +98,12 @@ func (s *Store) UpdateTask(id uint, c string) error {
 
 	s.Tasks[id].Description = c
 	s.Tasks[id].UpdatedAt = time.Now().Unix()
+	WriteData(s)
 
 	return nil
 }
 
-func (s *Store) DeleteTask(id uint) (string, error) {
+func (s *Store) DeleteTask(id int) (string, error) {
 	if len(s.Tasks) == 0 {
 		return "", errors.New("There are no tasks, start working!")
 	}
@@ -246,16 +114,18 @@ func (s *Store) DeleteTask(id uint) (string, error) {
 	}
 
 	if len(s.Tasks) == 1 {
-		s.Tasks = map[uint]*Task{}
+		s.Tasks = map[int]*Task{}
 		s.NextID = 1
 		return out.Description, nil
 	}
 
 	delete(s.Tasks, id)
+	WriteData(s)
+
 	return out.Description, nil
 }
 
-func (s *Store) MarkTask(id uint, status string) error {
+func (s *Store) MarkTask(id int, status string) error {
 	if len(s.Tasks) == 0 {
 		return errors.New("there are no tasks, start working!")
 	}
@@ -269,6 +139,8 @@ func (s *Store) MarkTask(id uint, status string) error {
 	}
 
 	s.Tasks[id].setStatus(status)
+	WriteData(s)
+
 	return nil
 }
 
@@ -323,7 +195,7 @@ func isFileExists(path string) bool {
 	return true
 }
 
-func loadData(s *Store) error {
+func LoadData(s *Store) error {
 	dataPath := os.ExpandEnv(storePath)
 
 	if !isFileExists(dataPath) {
@@ -360,7 +232,7 @@ func loadData(s *Store) error {
 	return nil
 }
 
-func writeData(s *Store) error {
+func WriteData(s *Store) error {
 	dataPath := os.ExpandEnv(storePath)
 
 	data, err := json.Marshal(s)

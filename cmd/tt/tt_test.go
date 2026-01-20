@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/soakrot/cli-task-tracker/internal/store"
 	"strings"
 	"testing"
 )
 
 func TestAddTask(t *testing.T) {
-	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
+	store := store.Store{Tasks: make(map[int]*store.Task), NextID: 1}
 
 	tests := []struct {
 		id          uint
@@ -33,13 +34,13 @@ func TestAddTask(t *testing.T) {
 }
 
 func TestUpdateTask(t *testing.T) {
-	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
+	store := store.Store{Tasks: make(map[int]*store.Task), NextID: 1}
 	store.AddTask("Task 1")
 	store.AddTask("Task 2")
 	store.AddTask("Task 3")
 
 	tests := []struct {
-		id   uint
+		id   int
 		c    string
 		want string
 	}{
@@ -65,13 +66,13 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
+	store := store.Store{Tasks: make(map[int]*store.Task), NextID: 1}
 	store.AddTask("Task 1")
 	store.AddTask("Task 2")
 	store.AddTask("Task 3")
 
 	tests := []struct {
-		id   uint
+		id   int
 		want string
 	}{
 		{1, "task 1"},
@@ -93,14 +94,14 @@ func TestDeleteTask(t *testing.T) {
 }
 
 func TestMarkTask(t *testing.T) {
-	store := Store{Tasks: make(map[uint]*Task), NextID: 1}
+	store := store.Store{Tasks: make(map[int]*store.Task), NextID: 1}
 	store.AddTask("Task 1")
 	store.AddTask("Task 2")
 	store.AddTask("Task 3")
 
 	tests := []struct {
 		name        string
-		id          uint
+		id          int
 		status      string
 		expectedErr error
 	}{
