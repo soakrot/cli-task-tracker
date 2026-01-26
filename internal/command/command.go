@@ -20,6 +20,10 @@ type Delete struct {
 	Id int
 }
 
+type DeleteAll struct {
+	Status string
+}
+
 type List struct {
 	Status string
 }
@@ -36,13 +40,6 @@ func AddCmd(args []string) *Add {
 	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
 	addCmd.Parse(os.Args[2:])
 	add.Title = addCmd.Arg(0)
-	// id, err := store..AddTask(add.Title)
-	// if err != nil {
-	// 	fmt.Fprintln(os.Stderr, err)
-	// 	os.Exit(1)
-	// }
-	// store.WriteData(s)
-	// fmt.Println(id)
 
 	return add
 }
@@ -60,12 +57,6 @@ func UpdateCmd(args []string) *Update {
 	}
 	update.Id = id
 
-	// err = store.UpdateTask(uint(id), content)
-	// if err != nil {
-	// 	fmt.Fprintln(os.Stderr, err)
-	// 	os.Exit(1)
-	// }
-	// writeData(&store)
 	return update
 }
 
@@ -81,14 +72,16 @@ func DeleteCmd(args []string) *Delete {
 	}
 	del.Id = id
 
-	// out, err := store.DeleteTask(uint(id))
-	// if err != nil {
-	// 	fmt.Fprintln(os.Stderr, err)
-	// 	os.Exit(1)
-	// }
-	// fmt.Println(out)
-	// writeData(&store)
 	return del
+}
+
+func DeleteAllCmd(args []string) *DeleteAll {
+	delAll := &DeleteAll{}
+	delAllCmd := flag.NewFlagSet("delete-all", flag.ExitOnError)
+	delAllCmd.StringVar(&delAll.Status, "status", "", "status[todo, in-progress, done], status is optional")
+	delAllCmd.Parse(args)
+
+	return delAll
 }
 
 func MarkCmd(args []string) *Mark {
@@ -104,12 +97,7 @@ func MarkCmd(args []string) *Mark {
 
 	mark.Id = id
 	mark.Status = status
-	// err = store.MarkTask(uint(id), status)
-	// if err != nil {
-	// 	fmt.Fprintln(os.Stderr, err)
-	// 	os.Exit(1)
-	// }
-	// writeData(&store)
+
 	return mark
 }
 
@@ -118,9 +106,6 @@ func ListCmd(args []string) *List {
 	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
 	listCmd.Parse(args)
 	list.Status = listCmd.Arg(0)
-	// if err := store.ListTasks(status); err != nil {
-	// 	fmt.Fprintln(os.Stderr, err)
-	// 	os.Exit(1)
-	// }
+
 	return list
 }

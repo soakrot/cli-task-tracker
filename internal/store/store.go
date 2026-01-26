@@ -116,6 +116,7 @@ func (s *Store) DeleteTask(id int) (string, error) {
 	if len(s.Tasks) == 1 {
 		s.Tasks = map[int]*Task{}
 		s.NextID = 1
+		WriteData(s)
 		return out.Description, nil
 	}
 
@@ -123,6 +124,23 @@ func (s *Store) DeleteTask(id int) (string, error) {
 	WriteData(s)
 
 	return out.Description, nil
+}
+
+func (s *Store) DeleteAll(status string) error {
+	skipStatusCheck := false
+	if len(status) == 0 {
+		skipStatusCheck = true
+	}
+
+	if ok, err := isValidStatus(status); !ok && !skipStatusCheck {
+		return err
+	}
+
+	s.Tasks = map[int]*Task{}
+	s.NextID = 1
+	WriteData(s)
+
+	return nil
 }
 
 func (s *Store) MarkTask(id int, status string) error {

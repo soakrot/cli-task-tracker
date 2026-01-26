@@ -35,6 +35,11 @@ var commands = map[string]func([]string) error{
 		fmt.Println(out)
 		return err
 	},
+	"delete-all": func(args []string) error {
+		delAllArgs := command.DeleteAllCmd(args)
+		err := s.DeleteAll(delAllArgs.Status)
+		return err
+	},
 	"mark": func(args []string) error {
 		mark := command.MarkCmd(args)
 		err := s.MarkTask(mark.Id, mark.Status)
