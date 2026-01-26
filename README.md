@@ -109,7 +109,7 @@ tt mark <id> <status>
 Example:
 
 ```bash
-tt delete-all [status]
+tt mark 1 done
 ```
 
 ### List Tasks
@@ -123,8 +123,8 @@ tt list [status]
 Example:
 
 ```bash
-tt list
-tt list todo
+tt list # Lists all tasks
+tt list todo # Lists all tasks with "todo" status
 ```
 
 ### Example Workflow
